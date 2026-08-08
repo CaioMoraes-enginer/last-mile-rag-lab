@@ -26,13 +26,23 @@ O projeto será desenvolvido em três níveis comparáveis:
 Esta primeira versão entrega somente a fundação documental. Pipeline, avaliação, interface e integração
 com Arduino serão adicionados depois que o contrato do corpus estiver estabilizado.
 
-## A ideia em uma imagem
+## O problema em duas imagens
 
-![Charge em pixel art do Last Mile RAG Lab: comparação entre contexto completo, RAG simples e RAG avançado](assets/charge-rag-rotas-32bit.png)
+### 1. O desafio
 
-Sem recuperação, o sistema enfrenta contexto excessivo e informação incompleta. O RAG simples encontra
-o bloqueio e propõe um desvio seguro. O RAG avançado conecta pedido, malha, incidente, política e SLA para
-validar uma alternativa que não aparece quando cada evidência é analisada isoladamente.
+![Mapa em pixel art com três rotas, bloqueio entre B e D e evidências que precisam ser conectadas por RAG](assets/01-problema-last-mile-rag.png)
+
+Um pedido precisa chegar ao destino, mas a rota aparentemente mais curta foi bloqueada. As evidências
+para encontrar uma alternativa estão espalhadas entre documentos de pedido, malha, incidente, política
+de acesso e SLA. O RAG deve recuperar e conectar essas informações antes de recomendar o caminho.
+
+### 2. O experimento
+
+![Grade 3x3 em pixel art comparando entrada, decisão e resultado sem RAG, com RAG simples e com RAG avançado](assets/02-comparacao-rag-3x3.png)
+
+A grade resume a hipótese do caso canônico: sem recuperação, a decisão falha no bloqueio; o RAG simples
+encontra um desvio válido, porém lento; o RAG avançado combina as cinco fontes e revela uma rota permitida
+e mais rápida. O benchmark medirá se cada pipeline realmente sustenta esse resultado com evidências.
 
 ## Problema central
 
