@@ -28,7 +28,7 @@ com Arduino serão adicionados depois que o contrato do corpus estiver estabiliz
 
 ## A ideia em uma imagem
 
-![Charge do Last Mile RAG Lab: comparação entre contexto completo, RAG simples e RAG avançado](assets/charge-rag-rotas.png)
+![Charge em pixel art do Last Mile RAG Lab: comparação entre contexto completo, RAG simples e RAG avançado](assets/charge-rag-rotas-32bit.png)
 
 Sem recuperação, o sistema enfrenta contexto excessivo e informação incompleta. O RAG simples encontra
 o bloqueio e propõe um desvio seguro. O RAG avançado conecta pedido, malha, incidente, política e SLA para
