@@ -26,6 +26,14 @@ O projeto será desenvolvido em três níveis comparáveis:
 Esta primeira versão entrega somente a fundação documental. Pipeline, avaliação, interface e integração
 com Arduino serão adicionados depois que o contrato do corpus estiver estabilizado.
 
+## A ideia em uma imagem
+
+![Charge do Last Mile RAG Lab: comparação entre contexto completo, RAG simples e RAG avançado](assets/charge-rag-rotas.png)
+
+Sem recuperação, o sistema enfrenta contexto excessivo e informação incompleta. O RAG simples encontra
+o bloqueio e propõe um desvio seguro. O RAG avançado conecta pedido, malha, incidente, política e SLA para
+validar uma alternativa que não aparece quando cada evidência é analisada isoladamente.
+
 ## Problema central
 
 O caso de referência acompanha o pedido sintético `ORD-042`. A aplicação deverá responder:
