@@ -1,0 +1,64 @@
+{
+  "corpus_id": "last-mile-rag-lab-v0.1",
+  "title": "Last Mile RAG Lab - Corpus documental",
+  "language": "pt-BR",
+  "version": "0.1.0",
+  "generated_at": "2026-08-08T20:00:00-03:00",
+  "synthetic": true,
+  "retrieval_scope": "data/corpus/documents/*.pdf",
+  "document_count": 5,
+  "page_count": 42,
+  "documents": [
+    {
+      "document_id": "DOC-01",
+      "filename": "01-dossie-operacional-de-pedidos.pdf",
+      "document_type": "order_dossier",
+      "pages": 10,
+      "version": "0.1",
+      "topics": ["orders", "events", "modal", "timeline", "data_quality"],
+      "sha256": "79a26f1bbd60c75f242bee10a815efe8ffa1752895c758ed3bd67a8fe1391d3d"
+    },
+    {
+      "document_id": "DOC-02",
+      "filename": "02-catalogo-da-malha-logistica.pdf",
+      "document_type": "network_catalog",
+      "pages": 8,
+      "version": "NET-Z03-12",
+      "topics": ["graph", "segments", "routes", "base_costs", "versions"],
+      "sha256": "c14a43015f323976706dd974c6f23b9bf834f2ac2d30237ee4164623533afa0d"
+    },
+    {
+      "document_id": "DOC-03",
+      "filename": "03-boletins-operacionais.pdf",
+      "document_type": "operational_bulletins",
+      "pages": 8,
+      "version": "0.1",
+      "topics": ["incidents", "weather", "penalties", "validity", "versions"],
+      "sha256": "19074a8d17a1c7726bb7bf4766c713447d1938f875d363e1139d8399c0e9bcca"
+    },
+    {
+      "document_id": "DOC-04",
+      "filename": "04-politicas-de-acesso-e-modais.pdf",
+      "document_type": "access_policy",
+      "pages": 8,
+      "version": "POL-MODAL-CT-3.0",
+      "topics": ["access", "modal", "time_window", "eligibility", "versions"],
+      "sha256": "6fd7360b6b6d6269ee66741bfe78b80de8baa113692b9fe304c0e53f298aba26"
+    },
+    {
+      "document_id": "DOC-05",
+      "filename": "05-manual-de-sla-e-decisoes.pdf",
+      "document_type": "sla_decision_manual",
+      "pages": 8,
+      "version": "SLA-3.0",
+      "topics": ["sla", "risk", "decision", "abstention", "evidence"],
+      "sha256": "3d10c2b77aaad850bfbbff54b60360c1819719d1bf6f3c521063a98ccfbd5050"
+    }
+  ],
+  "constraints": {
+    "contains_real_personal_data": false,
+    "contains_real_orders": false,
+    "contains_private_api_data": false,
+    "brand_affiliation": false
+  }
+}
