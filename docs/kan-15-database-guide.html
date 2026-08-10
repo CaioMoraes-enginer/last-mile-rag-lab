@@ -1,0 +1,415 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Guia visual da camada PostgreSQL + pgvector do Last Mile RAG Lab.">
+  <title>KAN-15 | Banco e memória do Last Mile RAG Lab</title>
+  <style>
+    :root {
+      --bg:#07111f; --surface:#0d1a2b; --surface2:#12243a; --line:#23405d;
+      --text:#e9f2fb; --muted:#9db1c7; --cyan:#3bd8ff; --green:#54e29b;
+      --yellow:#ffd166; --purple:#b59cff; --shadow:0 24px 80px rgba(0,0,0,.28);
+    }
+    * { box-sizing:border-box; }
+    html { scroll-behavior:smooth; }
+    body {
+      margin:0; color:var(--text); line-height:1.6;
+      font-family:Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;
+      background:
+        radial-gradient(circle at 12% 0%,rgba(59,216,255,.12),transparent 26rem),
+        radial-gradient(circle at 90% 14%,rgba(181,156,255,.10),transparent 24rem),
+        var(--bg);
+    }
+    a { color:inherit; }
+    code,pre { font-family:"Cascadia Code","SFMono-Regular",Consolas,monospace; }
+    code { color:#ccecff; }
+    button { font:inherit; }
+    .shell { display:grid; grid-template-columns:250px minmax(0,1fr); min-height:100vh; }
+    aside {
+      position:sticky; top:0; height:100vh; padding:28px 22px;
+      border-right:1px solid rgba(157,177,199,.18);
+      background:rgba(7,17,31,.82); backdrop-filter:blur(14px);
+    }
+    .brand { display:flex; gap:12px; align-items:center; margin-bottom:30px; }
+    .brand-mark {
+      display:grid; place-items:center; width:42px; height:42px;
+      border:1px solid rgba(59,216,255,.45); border-radius:13px;
+      color:var(--cyan); background:rgba(59,216,255,.08); font-weight:800;
+    }
+    .brand strong,.brand small { display:block; }
+    .brand strong { font-size:.95rem; }
+    .brand small { color:var(--muted); }
+    nav a {
+      display:block; padding:9px 12px; margin:3px 0; border-radius:9px;
+      color:var(--muted); text-decoration:none; font-size:.92rem;
+    }
+    nav a:hover,nav a:focus-visible {
+      color:var(--text); background:rgba(59,216,255,.08); outline:none;
+    }
+    .side-note {
+      position:absolute; right:22px; bottom:24px; left:22px; padding:13px;
+      border:1px solid rgba(84,226,155,.25); border-radius:12px;
+      color:var(--muted); background:rgba(84,226,155,.06); font-size:.79rem;
+    }
+    main { width:min(1160px,calc(100% - 48px)); margin:0 auto; padding:58px 0 90px; }
+    .eyebrow {
+      color:var(--cyan); font-weight:750; letter-spacing:.12em;
+      text-transform:uppercase; font-size:.76rem;
+    }
+    h1 {
+      max-width:900px; margin:12px 0 18px; font-size:clamp(2.4rem,6vw,5.6rem);
+      line-height:.98; letter-spacing:-.055em;
+    }
+    h2 { margin:7px 0 0; font-size:clamp(1.8rem,4vw,3rem); line-height:1.08; letter-spacing:-.035em; }
+    h3 { margin:0 0 8px; font-size:1.07rem; }
+    p { margin:0 0 12px; }
+    .lead { max-width:780px; color:var(--muted); font-size:clamp(1rem,2vw,1.25rem); }
+    .muted { color:var(--muted); }
+    .badges { display:flex; flex-wrap:wrap; gap:9px; margin-top:28px; }
+    .badge {
+      padding:7px 11px; border:1px solid var(--line); border-radius:999px;
+      color:#c9d9e8; background:rgba(13,26,43,.8); font-size:.82rem;
+    }
+    .badge.done { border-color:rgba(84,226,155,.35); color:var(--green); }
+    .badge.progress { border-color:rgba(255,209,102,.35); color:var(--yellow); }
+    section { scroll-margin-top:24px; margin-top:82px; }
+    .section-head {
+      display:grid; grid-template-columns:minmax(0,1fr) minmax(240px,.7fr);
+      gap:36px; align-items:end; margin-bottom:26px;
+    }
+    .grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:16px; }
+    .card {
+      position:relative; overflow:hidden; padding:22px;
+      border:1px solid rgba(157,177,199,.17); border-radius:18px;
+      background:linear-gradient(145deg,rgba(18,36,58,.92),rgba(10,23,39,.88));
+      box-shadow:var(--shadow);
+    }
+    .card::before {
+      content:""; position:absolute; width:90px; height:90px; top:-55px; right:-35px;
+      border-radius:50%; background:rgba(59,216,255,.10); filter:blur(5px);
+    }
+    .number {
+      display:inline-grid; place-items:center; width:34px; height:34px; margin-bottom:16px;
+      border-radius:10px; color:var(--cyan); background:rgba(59,216,255,.10); font-weight:800;
+    }
+    .flow {
+      display:grid; grid-template-columns:repeat(13,auto); align-items:stretch; gap:10px;
+      padding:22px; overflow-x:auto; border:1px solid var(--line); border-radius:20px;
+      background:rgba(13,26,43,.68);
+    }
+    .flow-node {
+      min-width:145px; padding:16px; border:1px solid rgba(157,177,199,.2);
+      border-radius:14px; background:var(--surface2);
+    }
+    .flow-node strong,.flow-node small { display:block; }
+    .flow-node small { margin-top:5px; color:var(--muted); }
+    .arrow { align-self:center; color:var(--cyan); font-size:1.5rem; }
+    .io-grid { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+    .io-card {
+      min-height:250px; padding:24px; border-radius:18px;
+      border:1px solid var(--line); background:var(--surface);
+    }
+    .io-card.input { border-top:3px solid var(--purple); }
+    .io-card.output { border-top:3px solid var(--green); }
+    .io-label { color:var(--muted); text-transform:uppercase; letter-spacing:.12em; font-size:.72rem; }
+    pre {
+      overflow:auto; margin:14px 0 0; padding:18px;
+      border:1px solid rgba(157,177,199,.16); border-radius:14px;
+      color:#d9f0ff; background:#050c16; font-size:.82rem; line-height:1.55;
+    }
+    .copy {
+      float:right; padding:5px 9px; border:1px solid var(--line); border-radius:8px;
+      color:var(--muted); background:transparent; cursor:pointer; font-size:.75rem;
+    }
+    .copy:hover { color:var(--text); border-color:var(--cyan); }
+    .steps { display:grid; gap:12px; margin-top:20px; }
+    .step {
+      display:grid; grid-template-columns:40px minmax(0,1fr) auto; gap:14px; align-items:start;
+      padding:16px; border:1px solid rgba(157,177,199,.16); border-radius:14px;
+      background:rgba(13,26,43,.7);
+    }
+    .step-index {
+      display:grid; place-items:center; width:34px; height:34px; border-radius:50%;
+      color:var(--bg); background:var(--cyan); font-weight:850;
+    }
+    .state {
+      padding:4px 8px; border-radius:999px; white-space:nowrap;
+      font-size:.72rem; font-weight:700;
+    }
+    .state.done { color:var(--green); background:rgba(84,226,155,.10); }
+    .state.todo { color:var(--yellow); background:rgba(255,209,102,.10); }
+    .tabs { display:flex; flex-wrap:wrap; gap:8px; margin-bottom:14px; }
+    .tab {
+      padding:9px 13px; border:1px solid var(--line); border-radius:10px;
+      color:var(--muted); background:transparent; cursor:pointer;
+    }
+    .tab.active { color:var(--bg); border-color:var(--cyan); background:var(--cyan); font-weight:750; }
+    .panel { display:none; }
+    .panel.active { display:block; }
+    .callout {
+      padding:18px 20px; border-left:3px solid var(--yellow); border-radius:0 12px 12px 0;
+      color:#dce8f3; background:rgba(255,209,102,.07);
+    }
+    .idempotency {
+      display:grid; grid-template-columns:1fr auto 1fr auto 1fr;
+      gap:12px; align-items:center; margin-top:24px;
+    }
+    .idempotency .box {
+      padding:18px; border:1px solid var(--line); border-radius:14px;
+      background:var(--surface); text-align:center;
+    }
+    .checklist { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; }
+    .check {
+      display:flex; gap:11px; align-items:flex-start; padding:13px 14px;
+      border-radius:12px; color:var(--muted); background:rgba(13,26,43,.72);
+    }
+    .check b { color:var(--text); }
+    .icon-done { color:var(--green); }
+    .icon-todo { color:var(--yellow); }
+    footer {
+      margin-top:80px; padding-top:24px; border-top:1px solid var(--line);
+      color:var(--muted); font-size:.86rem;
+    }
+    @media (max-width:920px) {
+      .shell { display:block; }
+      aside { position:static; width:auto; height:auto; border-right:0; border-bottom:1px solid var(--line); }
+      aside nav,.side-note { display:none; }
+      .brand { margin:0; }
+      main { width:min(100% - 32px,760px); padding-top:38px; }
+      .grid,.section-head,.io-grid,.checklist { grid-template-columns:1fr; }
+      .idempotency { grid-template-columns:1fr; }
+      .idempotency .arrow { transform:rotate(90deg); text-align:center; }
+    }
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <aside>
+      <div class="brand">
+        <div class="brand-mark">LM</div>
+        <div><strong>Last Mile RAG Lab</strong><small>KAN-15 · guia visual</small></div>
+      </div>
+      <nav aria-label="Navegação da página">
+        <a href="#visao">Visão geral</a>
+        <a href="#arquitetura">Arquitetura</a>
+        <a href="#entrada-saida">Entrada e saída</a>
+        <a href="#repository">Repository</a>
+        <a href="#loader">Loader</a>
+        <a href="#buscas">Tipos de busca</a>
+        <a href="#docker">Por que Docker?</a>
+        <a href="#checklist">Checklist KAN-15</a>
+      </nav>
+      <div class="side-note">Este documento explica a infraestrutura. A rota é decidida depois pelos pipelines e pelo motor determinístico.</div>
+    </aside>
+
+    <main>
+      <header id="visao">
+        <div class="eyebrow">Memória pesquisável do RAG</div>
+        <h1>Como o banco transforma documentos em evidências recuperáveis.</h1>
+        <p class="lead">Um mapa visual do caminho entre os PDFs, os chunks, o PostgreSQL com pgvector e as consultas que alimentarão os três pipelines do experimento.</p>
+        <div class="badges">
+          <span class="badge done">✓ Docker saudável</span>
+          <span class="badge done">✓ PostgreSQL 16</span>
+          <span class="badge done">✓ pgvector 0.8.6</span>
+          <span class="badge done">✓ Upsert idempotente</span>
+          <span class="badge done">✓ Queries validadas</span>
+          <span class="badge done">✓ Loader idempotente</span>
+        </div>
+      </header>
+
+      <section>
+        <div class="section-head">
+          <div><div class="eyebrow">Ideia central</div><h2>Três responsabilidades, sem mistura.</h2></div>
+          <p class="muted">Separar as camadas deixa o projeto testável, reproduzível e fácil de evoluir.</p>
+        </div>
+        <div class="grid">
+          <article class="card"><span class="number">1</span><h3>Docker executa</h3><p class="muted">Cria um ambiente isolado com PostgreSQL, pgvector, volume persistente e healthcheck.</p></article>
+          <article class="card"><span class="number">2</span><h3>Repository conversa</h3><p class="muted">Centraliza inserts, upserts e buscas. O restante do Python não espalha SQL pelo projeto.</p></article>
+          <article class="card"><span class="number">3</span><h3>Loader transporta</h3><p class="muted">Lê o artefato da ingestão e pede ao repository para persistir cada chunk com segurança.</p></article>
+        </div>
+      </section>
+
+      <section id="arquitetura">
+        <div class="section-head">
+          <div><div class="eyebrow">Fluxo completo</div><h2>Do PDF até a evidência.</h2></div>
+          <p class="muted">O banco não lê PDFs e não escolhe rotas. Ele armazena e encontra trechos preparados por outras camadas.</p>
+        </div>
+        <div class="flow" aria-label="Fluxo da ingestão até a resposta">
+          <div class="flow-node"><strong>5 PDFs</strong><small>Corpus sintético</small></div><span class="arrow">→</span>
+          <div class="flow-node"><strong>KAN-6</strong><small>Extração + chunking</small></div><span class="arrow">→</span>
+          <div class="flow-node"><strong>JSONL</strong><small>Artefato independente</small></div><span class="arrow">→</span>
+          <div class="flow-node"><strong>Loader</strong><small>Valida + entrega</small></div><span class="arrow">→</span>
+          <div class="flow-node"><strong>Repository</strong><small>Upsert + queries</small></div><span class="arrow">→</span>
+          <div class="flow-node"><strong>Postgres</strong><small>Texto + vetores</small></div><span class="arrow">→</span>
+          <div class="flow-node"><strong>RAG</strong><small>Evidências recuperadas</small></div>
+        </div>
+      </section>
+
+      <section id="entrada-saida">
+        <div class="section-head">
+          <div><div class="eyebrow">Contrato mental</div><h2>Qual entrada chega? Qual saída volta?</h2></div>
+          <p class="muted">Pensar em entrada e saída evita que cada parte invente seu próprio formato.</p>
+        </div>
+        <div class="io-grid">
+          <article class="io-card input">
+            <span class="io-label">Entrada do armazenamento</span>
+            <h3>Um chunk estruturado</h3>
+            <p class="muted">Texto pequeno com identidade, origem, temporalidade, entidades e embedding opcional.</p>
+            <pre><button class="copy" data-copy="input-code">copiar</button><code id="input-code">{
+  "chunk_id": "DOC-03-P02-C01",
+  "document_id": "DOC-03",
+  "page": 2,
+  "version": "2.1",
+  "zona": "ZONA-03",
+  "entity_ids": ["SG-BD"],
+  "content": "Bloqueio total...",
+  "embedding": [0.014, -0.021, "..."]
+}</code></pre>
+          </article>
+          <article class="io-card output">
+            <span class="io-label">Saída de uma busca</span>
+            <h3>Trechos ordenados por relevância</h3>
+            <p class="muted">O pipeline recebe evidências com origem rastreável e pontuação.</p>
+            <pre><button class="copy" data-copy="output-code">copiar</button><code id="output-code">[
+  {
+    "chunk_id": "DOC-03-P02-C01",
+    "document_id": "DOC-03",
+    "page": 2,
+    "content": "Bloqueio total...",
+    "distance": 0.083
+  }
+]</code></pre>
+          </article>
+        </div>
+      </section>
+
+      <section id="repository">
+        <div class="section-head">
+          <div><div class="eyebrow">Camada de acesso</div><h2>Repository: tradutor entre Python e SQL.</h2></div>
+          <p class="muted">Ele recebe estruturas Python, adapta embeddings para <code>vector</code>, executa SQL e devolve resultados previsíveis.</p>
+        </div>
+        <div class="steps">
+          <div class="step"><span class="step-index">1</span><div><h3>Recebe</h3><p class="muted"><code>dict</code> ou coleção de chunks vindos do loader.</p></div><span class="state done">feito</span></div>
+          <div class="step"><span class="step-index">2</span><div><h3>Valida</h3><p class="muted">Exige <code>chunk_id</code>, <code>document_id</code> e <code>content</code>; normaliza listas e vetores.</p></div><span class="state done">feito</span></div>
+          <div class="step"><span class="step-index">3</span><div><h3>Executa upsert</h3><p class="muted">Insere um ID novo ou atualiza o existente usando <code>ON CONFLICT</code>.</p></div><span class="state done">testado</span></div>
+          <div class="step"><span class="step-index">4</span><div><h3>Consulta</h3><p class="muted">Expõe métodos vetorial, lexical e por metadados sem espalhar SQL nos pipelines.</p></div><span class="state done">testado</span></div>
+        </div>
+        <div class="idempotency">
+          <div class="box"><strong>Execução 1</strong><p class="muted">chunk_id = X<br>INSERT</p></div><span class="arrow">→</span>
+          <div class="box"><strong>Execução 2</strong><p class="muted">chunk_id = X<br>UPDATE</p></div><span class="arrow">→</span>
+          <div class="box"><strong>Resultado</strong><p style="color:var(--green)">1 linha atualizada<br>0 duplicações</p></div>
+        </div>
+      </section>
+
+      <section id="loader">
+        <div class="section-head">
+          <div><div class="eyebrow">Carga de dados</div><h2>Loader: transporta sem decidir.</h2></div>
+          <p class="muted">Ele não cria chunks nem gera respostas. Lê o artefato, valida cada linha e chama o repository.</p>
+        </div>
+        <div class="grid">
+          <article class="card"><span class="number">A</span><h3>Ler JSONL</h3><p class="muted">Uma linha JSON por chunk facilita streaming, auditoria e reprocessamento.</p></article>
+          <article class="card"><span class="number">B</span><h3>Falhar com clareza</h3><p class="muted">Linha inválida informa arquivo e número. Uma carga parcial não parece completa.</p></article>
+          <article class="card"><span class="number">C</span><h3>Reexecutar</h3><p class="muted">O mesmo arquivo pode ser recarregado: o upsert atualiza IDs existentes.</p></article>
+        </div>
+        <div class="callout" style="margin-top:18px"><strong>Importante:</strong> enquanto a KAN-6 não gera o artefato real, o KAN-15 usa uma fixture representativa. A interface fica pronta para receber a saída futura.</div>
+      </section>
+
+      <section id="buscas">
+        <div class="section-head">
+          <div><div class="eyebrow">Recuperação híbrida</div><h2>O mesmo banco, três maneiras de encontrar evidência.</h2></div>
+          <p class="muted">Clique nas opções para comparar entrada, operação e uso.</p>
+        </div>
+        <div class="tabs" role="tablist">
+          <button class="tab active" data-tab="vetorial">Vetorial</button>
+          <button class="tab" data-tab="lexical">Lexical</button>
+          <button class="tab" data-tab="filtros">Metadados</button>
+        </div>
+        <div class="card">
+          <div class="panel active" id="vetorial">
+            <h3>Busca vetorial</h3>
+            <p class="muted"><strong>Entrada:</strong> embedding da pergunta. <strong>Operação:</strong> distância cosseno com <code>&lt;=&gt;</code>. <strong>Saída:</strong> chunks semanticamente próximos.</p>
+            <pre><code>SELECT chunk_id, embedding &lt;=&gt; :query_vector AS distance
+FROM chunks
+WHERE embedding IS NOT NULL
+ORDER BY distance ASC
+LIMIT 5;</code></pre>
+          </div>
+          <div class="panel" id="lexical">
+            <h3>Busca lexical</h3>
+            <p class="muted"><strong>Entrada:</strong> texto ou ID exato. <strong>Operação:</strong> <code>tsvector</code>. <strong>Saída:</strong> chunks com termos como ORD-042 ou SG-BD.</p>
+            <pre><code>SELECT chunk_id, content
+FROM chunks
+WHERE content_tsv @@ plainto_tsquery('portuguese', 'SG-BD');</code></pre>
+          </div>
+          <div class="panel" id="filtros">
+            <h3>Filtros estruturados</h3>
+            <p class="muted"><strong>Entrada:</strong> zona, versão e instante. <strong>Operação:</strong> condições SQL determinísticas. <strong>Saída:</strong> evidências compatíveis.</p>
+            <pre><code>WHERE zona = 'ZONA-03'
+  AND effective_from &lt;= :decision_at
+  AND (effective_to IS NULL OR effective_to &gt;= :decision_at)</code></pre>
+          </div>
+        </div>
+      </section>
+
+      <section id="docker">
+        <div class="section-head">
+          <div><div class="eyebrow">Infraestrutura</div><h2>Por que colocar o banco no Docker?</h2></div>
+          <p class="muted">Docker não é o banco. É a embalagem reproduzível que executa o banco e suas dependências.</p>
+        </div>
+        <div class="grid">
+          <article class="card"><h3>Mesmo ambiente</h3><p class="muted">A imagem fixa PostgreSQL + pgvector. Outra pessoa não configura a extensão manualmente.</p></article>
+          <article class="card"><h3>Isolamento</h3><p class="muted">O serviço usa porta, variáveis, rede e volume próprios.</p></article>
+          <article class="card"><h3>Produção em miniatura</h3><p class="muted">Healthcheck, persistência e rede imitam padrões reais, sem fingir alta disponibilidade ou backups.</p></article>
+        </div>
+        <pre><button class="copy" data-copy="docker-code">copiar</button><code id="docker-code">docker compose up -d
+python -m db.smoke_test
+python -m db.repository_smoke_test</code></pre>
+      </section>
+
+      <section id="checklist">
+        <div class="section-head">
+          <div><div class="eyebrow">Definição de pronto</div><h2>O que foi entregue no KAN-15?</h2></div>
+          <p class="muted">Armazenamento, consultas, carga, testes e documentação foram verificados em conjunto.</p>
+        </div>
+        <div class="checklist">
+          <div class="check"><span class="icon-done">✓</span><span><b>Docker saudável</b><br>Postgres + pgvector na porta 5433.</span></div>
+          <div class="check"><span class="icon-done">✓</span><span><b>Schema e índices</b><br>Chunks, tsvector e HNSW.</span></div>
+          <div class="check"><span class="icon-done">✓</span><span><b>Comunicação</b><br>Python e Beekeeper conectados.</span></div>
+          <div class="check"><span class="icon-done">✓</span><span><b>Upsert idempotente</b><br>Reexecução mantém uma linha.</span></div>
+          <div class="check"><span class="icon-done">✓</span><span><b>Queries no repository</b><br>Vetorial, lexical e filtros.</span></div>
+          <div class="check"><span class="icon-done">✓</span><span><b>Loader JSONL</b><br>Leitura, validação e relatório.</span></div>
+          <div class="check"><span class="icon-done">✓</span><span><b>Teste do loader</b><br>Duas cargas sem duplicação.</span></div>
+          <div class="check"><span class="icon-done">✓</span><span><b>Documentação final</b><br>Subir, conectar, carregar e resetar.</span></div>
+        </div>
+      </section>
+
+      <footer>Last Mile RAG Lab · KAN-15 · Documento educacional local · Corpus sintético e independente.</footer>
+    </main>
+  </div>
+
+  <script>
+    const tabs = document.querySelectorAll('.tab');
+    const panels = document.querySelectorAll('.panel');
+
+    tabs.forEach((tab) => {
+      tab.addEventListener('click', () => {
+        tabs.forEach((item) => item.classList.remove('active'));
+        panels.forEach((panel) => panel.classList.remove('active'));
+        tab.classList.add('active');
+        document.getElementById(tab.dataset.tab).classList.add('active');
+      });
+    });
+
+    document.querySelectorAll('.copy').forEach((button) => {
+      button.addEventListener('click', async () => {
+        const target = document.getElementById(button.dataset.copy);
+        await navigator.clipboard.writeText(target.innerText);
+        const original = button.textContent;
+        button.textContent = 'copiado';
+        setTimeout(() => { button.textContent = original; }, 1200);
+      });
+    });
+  </script>
+</body>
+</html>

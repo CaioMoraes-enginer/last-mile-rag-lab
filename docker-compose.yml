@@ -1,0 +1,26 @@
+# Store local do RAG: PostgreSQL + pgvector (KAN-15).
+# Sobe com:  docker compose up -d
+# Reseta com: docker compose down -v
+
+services:
+  db:
+    image: pgvector/pgvector:pg16
+    container_name: lastmile-rag-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-lastmile}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-lastmile}
+      POSTGRES_DB: ${POSTGRES_DB:-lastmile_rag}
+    ports:
+      - "${DB_HOST_PORT:-5433}:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./db/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-lastmile} -d ${POSTGRES_DB:-lastmile_rag}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  pgdata:

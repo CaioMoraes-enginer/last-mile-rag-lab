@@ -98,6 +98,14 @@ duplicidades, eventos fora de ordem e versões revogadas para evitar uma recuper
 |   `-- corpus/
 |       |-- documents/          # cinco PDFs usados como fonte
 |       `-- manifest.json       # contrato e metadados do corpus
+|-- db/
+|   |-- init/01_schema.sql      # PostgreSQL + pgvector
+|   |-- client.py               # conexao por variaveis de ambiente
+|   |-- repository.py           # upsert e consultas reutilizaveis
+|   `-- loader.py               # carga idempotente de JSONL
+|-- docs/
+|   |-- escopo-v1.md
+|   `-- kan-15-database-guide.html
 |-- tools/
 |   |-- generate_document_01.py
 |   |-- generate_documents_02_05.py
@@ -107,6 +115,24 @@ duplicidades, eventos fora de ordem e versões revogadas para evitar uma recuper
 |-- README.md
 `-- requirements.txt
 ```
+
+## Banco local para recuperacao
+
+A camada de armazenamento usa PostgreSQL 16 + pgvector em Docker. Ela oferece
+persistencia de chunks, busca vetorial, busca lexical e filtros por metadados e
+vigencia.
+
+```bash
+docker compose up -d
+python -m db.smoke_test
+python -m db.repository_smoke_test
+python -m db.query_smoke_test
+python -m db.loader_smoke_test
+```
+
+Consulte [`db/README.md`](db/README.md) para configuracao, contrato JSONL,
+Beekeeper Studio, carga e reset. O guia visual esta em
+[`docs/kan-15-database-guide.html`](docs/kan-15-database-guide.html).
 
 ## Reproduzir os documentos
 
