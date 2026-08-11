@@ -7,3 +7,5 @@ pgvector>=0.3,<1
 python-dotenv>=1,<2
 # Modelo de dominio e contrato de decisao (KAN-3)
 pydantic>=2,<3
+# Testes ouro e contrafactuais (KAN-5)
+pytest>=8,<9
