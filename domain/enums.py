@@ -45,3 +45,10 @@ class OrderState(StrEnum):
     PICKED_UP = "PICKED_UP"
     DELIVERED = "DELIVERED"
     CANCELLED = "CANCELLED"
+
+class SegmentClass(StrEnum):
+    """Classe da via de um segmento (define a penalidade de chuva, DOC-03)."""
+    LOCAL = "LOCAL"
+    ARTERIAL = "ARTERIAL"
+    EXPRESS = "EXPRESS"
+    CT_BIKE = "CT-BIKE"
