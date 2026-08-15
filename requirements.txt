@@ -1,4 +1,7 @@
 reportlab>=4.0,<5
+# Ingestao: parsing layout-aware + estrutura de tabela (KAN-16).
+docling>=2.120,<3
+# pdfplumber: extrator baseline do KAN-6 (mantido para comparacao no KAN-10).
 pdfplumber>=0.11,<1
 pypdf>=5,<7
 # Banco: acesso ao Postgres + pgvector (KAN-15)
