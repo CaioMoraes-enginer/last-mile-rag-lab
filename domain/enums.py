@@ -28,6 +28,7 @@ class DecisionStatus(StrEnum):
     """Como a decisao terminou."""
     SUCCESS = "SUCCESS"                                # achou uma rota valida
     INSUFFICIENT_EVIDENCE = "INSUFFICIENT_EVIDENCE"    # faltou evidencia pra decidir
+    ERROR = "ERROR"                                    # falha de execucao (ex: JSON invalido do LLM)
 
 class Modal(StrEnum):
     """Meio de transporte do entregador."""
