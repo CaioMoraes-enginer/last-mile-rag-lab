@@ -18,8 +18,10 @@ from pathlib import Path
 from pipelines.base import PipelineConfig
 from pipelines.cases import canonical_routes, make_order
 from pipelines.context import load_corpus
+from pipelines.advanced import AdvancedConfig, AdvancedPipeline
 from pipelines.embeddings import HashingEmbeddingProvider, OllamaEmbeddingProvider
 from pipelines.full_context import FullContextPipeline
+from pipelines.lexical import InMemoryBM25Store, PgLexicalStore
 from pipelines.providers import MockProvider, OllamaProvider
 from pipelines.vector import VectorPipeline
 from pipelines.vectorstore import InMemoryVectorStore, PgVectorStore
@@ -52,18 +54,33 @@ def _build_embedder(args):
     return HashingEmbeddingProvider()
 
 
+def _build_stores(args, embedder):
+    """(vector_store, lexical_store) conforme o backend escolhido."""
+    if args.store == "pgvector":
+        from db.client import connect
+        from db.repository import ChunkRepository
+        repo = ChunkRepository(connect())
+        return PgVectorStore(repo, embedding_model=args.embedding_model), PgLexicalStore(repo)
+    chunks = load_corpus()
+    return InMemoryVectorStore.from_chunks(chunks, embedder), InMemoryBM25Store(chunks)
+
+
 def _build_pipeline(args):
     if args.pipeline == "full_context":
         return FullContextPipeline()
 
     embedder = _build_embedder(args)
-    if args.store == "pgvector":
-        from db.client import connect
-        from db.repository import ChunkRepository
-        store = PgVectorStore(ChunkRepository(connect()), embedding_model=args.embedding_model)
-    else:
-        store = InMemoryVectorStore.from_chunks(load_corpus(), embedder)
-    return VectorPipeline(store, embedder, top_k=args.top_k)
+    vector_store, lexical_store = _build_stores(args, embedder)
+
+    if args.pipeline == "vector":
+        return VectorPipeline(vector_store, embedder, top_k=args.top_k)
+
+    cfg = AdvancedConfig(
+        use_lexical=not args.no_lexical, use_filters=not args.no_filters,
+        use_reranker=not args.no_reranker, use_tools=not args.no_tools,
+        top_k_retriever=args.top_k, final_k=args.final_k, max_per_document=args.max_per_doc,
+    )
+    return AdvancedPipeline(vector_store, embedder, lexical_store, config=cfg)
 
 
 def _serialize(result) -> dict:
@@ -75,6 +92,7 @@ def _serialize(result) -> dict:
         "telemetry": dataclasses.asdict(result.telemetry),
         "engine_validation": result.engine_validation,
         "retrieval": result.retrieval,
+        "trace": result.trace,
         "context_summary": {
             "chunk_count": len(result.context.chunk_ids),
             "char_count": result.context.char_count,
@@ -88,12 +106,19 @@ def _serialize(result) -> dict:
 
 def main() -> int:
     parser = argparse.ArgumentParser(description="Pipelines de decisao (KAN-7/8)")
-    parser.add_argument("--pipeline", choices=["full_context", "vector"], default="full_context")
+    parser.add_argument("--pipeline", choices=["full_context", "vector", "advanced"], default="full_context")
     parser.add_argument("--provider", choices=["ollama", "mock"], default="ollama")
     parser.add_argument("--model", default="llama3.1", help="modelo do LLM (Ollama)")
     parser.add_argument("--embedding-model", default="nomic-embed-text")
     parser.add_argument("--store", choices=["memory", "pgvector"], default="memory")
-    parser.add_argument("--top-k", type=int, default=8)
+    parser.add_argument("--top-k", type=int, default=8, help="candidatos por recuperador (advanced) / top-k (vector)")
+    parser.add_argument("--final-k", type=int, default=8, help="chunks no contexto (advanced)")
+    parser.add_argument("--max-per-doc", type=int, default=3, help="cap de diversificacao (advanced)")
+    # ablacoes do pipeline avancado
+    parser.add_argument("--no-lexical", action="store_true")
+    parser.add_argument("--no-filters", action="store_true")
+    parser.add_argument("--no-reranker", action="store_true")
+    parser.add_argument("--no-tools", action="store_true")
     parser.add_argument("--host", default="http://localhost:11434")
     parser.add_argument("--temperature", type=float, default=0.0)
     parser.add_argument("--seed", type=int, default=42)
@@ -102,7 +127,8 @@ def main() -> int:
 
     config = PipelineConfig(
         provider_model=args.model, temperature=args.temperature, seed=args.seed,
-        prompt_version="vector_v1" if args.pipeline == "vector" else "full_context_v1",
+        prompt_version={"vector": "vector_v1", "advanced": "advanced_v1"}.get(
+            args.pipeline, "full_context_v1"),
     )
     pipeline = _build_pipeline(args)
     result = pipeline.run(make_order(), canonical_routes(), _build_llm(args), config)

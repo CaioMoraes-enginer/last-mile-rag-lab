@@ -112,6 +112,7 @@ class PipelineResult:
     repair_applied: bool = False                     # se houve estrategia de reparo mensuravel
     errors: list[str] = field(default_factory=list)
     retrieval: list = field(default_factory=list)    # ranking recuperado (chunk_id, rank, score) — P2/P3
+    trace: dict = field(default_factory=dict)        # trace estruturado da execucao (consultas, fusao, tools) — P3
 
 
 class RagPipeline(ABC):
@@ -141,6 +142,14 @@ class RagPipeline(ABC):
         recuperacao (P2/P3) sobrescrevem para expor a auditoria da busca.
         """
         return []
+
+    def trace_record(self) -> dict:
+        """Trace estruturado da execucao (consultas, filtros, fusao, tools).
+
+        Vazio nos baselines; o pipeline avancado (P3) sobrescreve para permitir
+        reconstruir por que cada chunk chegou ao contexto.
+        """
+        return {}
 
     @abstractmethod
     def build_prompt(
@@ -198,4 +207,5 @@ class RagPipeline(ABC):
             repair_applied=repair_applied,
             errors=errors,
             retrieval=self.retrieval_records(),
+            trace=self.trace_record(),
         )
