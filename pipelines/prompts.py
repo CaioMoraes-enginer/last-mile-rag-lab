@@ -45,8 +45,12 @@ Formato EXATO do JSON de saida:
 }"""
 
 
-def render_full_context(order: Order, routes: list[RouteCandidate], context_text: str) -> str:
-    """Monta o prompt completo do pipeline P1 (contexto integral)."""
+def render_decision_prompt(order: Order, routes: list[RouteCandidate], context_text: str) -> str:
+    """Monta o prompt de decisao (compartilhado por P1/P2).
+
+    As instrucoes e o formato de saida sao os mesmos; a diferenca entre os
+    pipelines esta apenas no `context_text` (corpus integral vs. chunks top-k).
+    """
     pedido = (
         f"order_id: {order.order_id}\n"
         f"zona: {order.zona}\n"
@@ -67,3 +71,7 @@ def render_full_context(order: Order, routes: list[RouteCandidate], context_text
         f"===== FIM DOS DOCUMENTOS =====\n"
         f"Responda agora SOMENTE com o JSON."
     )
+
+
+# Compatibilidade: nome historico usado pelo pipeline P1.
+render_full_context = render_decision_prompt

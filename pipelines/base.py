@@ -111,6 +111,7 @@ class PipelineResult:
     engine_validation: dict | None = None            # etapa do motor registrada A PARTE (requisito 9)
     repair_applied: bool = False                     # se houve estrategia de reparo mensuravel
     errors: list[str] = field(default_factory=list)
+    retrieval: list = field(default_factory=list)    # ranking recuperado (chunk_id, rank, score) — P2/P3
 
 
 class RagPipeline(ABC):
@@ -132,6 +133,14 @@ class RagPipeline(ABC):
     @abstractmethod
     def retrieve(self, order: Order, routes: list[RouteCandidate]) -> ContextBundle:
         """Recupera o contexto entregue ao LLM. UNICO ponto que difere por pipeline."""
+
+    def retrieval_records(self) -> list:
+        """Ranking recuperado (chunk_id, rank, score, doc, page) para o artefato.
+
+        Vazio no baseline full-context (nao ha ranking); os pipelines com
+        recuperacao (P2/P3) sobrescrevem para expor a auditoria da busca.
+        """
+        return []
 
     @abstractmethod
     def build_prompt(
@@ -188,4 +197,5 @@ class RagPipeline(ABC):
             engine_validation=engine_validation,
             repair_applied=repair_applied,
             errors=errors,
+            retrieval=self.retrieval_records(),
         )
