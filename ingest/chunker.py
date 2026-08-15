@@ -1,14 +1,23 @@
-"""Extracao e chunking dos PDFs do corpus (KAN-6).
+"""Extracao e chunking dos PDFs do corpus (KAN-6 + KAN-16).
 
-Le cada PDF pagina a pagina (pdfplumber), quebra o texto em blocos coerentes de
-tamanho alvo (sem cortar paragrafo no meio) e anexa os IDs de entidade
-encontrados (SG-BD, ORD-042, ACCESS-Z03-017, ...). O texto ja sai com os acentos
-corretos — o `?` que aparece no terminal e so a exibicao do console do Windows.
+Le cada PDF com Docling (parsing consciente de layout + reconhecimento de
+estrutura de tabela), exporta o conteudo de cada pagina como Markdown — o que
+preserva as tabelas no formato `| col | col |` em vez de achatá-las — quebra o
+texto em blocos coerentes de tamanho alvo (sem cortar linha no meio) e anexa os
+IDs de entidade encontrados (SG-BD, ORD-042, ACCESS-Z03-017, ...).
+
+O extrator anterior (pdfplumber) fica registrado como baseline no historico do
+KAN-6 para comparacao no harness de avaliacao (KAN-10).
 """
+import os
 import re
 from dataclasses import dataclass
+from functools import lru_cache
 
-import pdfplumber
+# Docling usa torch; em Windows sem headers de OpenMP o torch.compile/inductor
+# tenta compilar C++ e falha (omp.h ausente). Rodar em modo eager evita isso.
+os.environ.setdefault("TORCHDYNAMO_DISABLE", "1")
+os.environ.setdefault("TORCH_COMPILE_DISABLE", "1")
 
 # IDs canonicos do corpus: MAIUSCULAS com um ou mais hifens (SG-BD, ORD-042,
 # INC-Z03-042, ACCESS-Z03-017, POL-MODAL-CT-3.0, ZONA-03, NET-Z03-12...).
@@ -20,19 +29,43 @@ TARGET_CHARS = 800
 
 @dataclass
 class PageText:
-    """Texto bruto de uma pagina (numero comeca em 1)."""
+    """Texto (Markdown) de uma pagina (numero comeca em 1)."""
     page: int
     text: str
 
 
+@lru_cache(maxsize=1)
+def _converter():
+    """Conversor Docling reutilizado entre documentos (carrega modelos 1x).
+
+    OCR desligado: os PDFs do corpus sao nativos digitais (gerados por
+    reportlab), entao o texto vem direto da camada textual, sem erro de OCR.
+    Reconhecimento de estrutura de tabela ligado (default) para preservar as
+    tabelas no Markdown.
+    """
+    from docling.datamodel.base_models import InputFormat
+    from docling.datamodel.pipeline_options import PdfPipelineOptions
+    from docling.document_converter import DocumentConverter, PdfFormatOption
+
+    options = PdfPipelineOptions()
+    options.do_ocr = False
+    options.do_table_structure = True
+
+    return DocumentConverter(
+        format_options={InputFormat.PDF: PdfFormatOption(pipeline_options=options)}
+    )
+
+
 def extract_pages(pdf_path: str) -> list[PageText]:
-    """Texto de cada pagina nao vazia do PDF."""
+    """Markdown de cada pagina nao vazia do PDF, via Docling."""
+    document = _converter().convert(pdf_path).document
     pages: list[PageText] = []
-    with pdfplumber.open(pdf_path) as pdf:
-        for numero, page in enumerate(pdf.pages, start=1):
-            texto = (page.extract_text() or "").strip()
-            if texto:
-                pages.append(PageText(page=numero, text=texto))
+    for numero in range(1, document.num_pages() + 1):
+        markdown = document.export_to_markdown(
+            page_no=numero, image_placeholder=""
+        ).strip()
+        if markdown:
+            pages.append(PageText(page=numero, text=markdown))
     return pages
 
 
