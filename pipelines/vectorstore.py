@@ -26,6 +26,15 @@ class RetrievedChunk:
     content: str
     score: float          # 0..1 (1 = identico); cosseno normalizado
     rank: int             # posicao no ranking (1 = melhor)
+    effective_from: str | None = None   # vigencia (para o filtro temporal do P3)
+    effective_to: str | None = None
+
+
+def _iso(value) -> str | None:
+    """Datetime do banco -> string ISO (ou repassa string/None)."""
+    if value is None:
+        return None
+    return value.isoformat() if hasattr(value, "isoformat") else str(value)
 
 
 def _cosine(a: list[float], b: list[float]) -> float:
@@ -68,6 +77,8 @@ def _dedup_rank(scored: list[tuple[float, dict]], top_k: int) -> list[RetrievedC
             content=chunk["content"],
             score=round(score, 6),
             rank=len(resultado) + 1,
+            effective_from=chunk.get("effective_from"),
+            effective_to=chunk.get("effective_to"),
         ))
         if len(resultado) >= top_k:
             break
@@ -130,6 +141,8 @@ class PgVectorStore:
                 chunk_id=row["chunk_id"], document_id=row["document_id"],
                 page=row.get("page"), version=row.get("version"),
                 content=row["content"], score=score, rank=pos,
+                effective_from=_iso(row.get("effective_from")),
+                effective_to=_iso(row.get("effective_to")),
             ))
         return resultado
 
