@@ -120,9 +120,30 @@ def test_no_hardcoded_c_counterfactual():
     pipe = _pipeline(AdvancedConfig(final_k=8, max_per_document=2), scenario=s)
     result = pipe.run(make_order(modal="MOTO"), canonical_routes(), _mock(route="C"), CONFIG)
 
-    assert result.engine_validation["gold_selected_route"] == "B"   # ouro NAO e C aqui
+    assert result.engine_validation["gold_route"] == "B"            # ouro NAO e C aqui
     assert result.decision.valid is False                           # motor reprova C p/ MOTO
     assert result.decision.status == "ERROR"
+
+
+def test_engine_validation_uses_shared_gold_contract():
+    """O P3 deve usar a MESMA chave `gold_route` dos demais pipelines (KAN-17).
+
+    Regressao: o P3 gerava `gold_selected_route`, quebrando a API e a interface
+    (KAN-12), que leem `gold_route`. As chaves gold_* devem casar com o contrato
+    compartilhado (decision._gold_record).
+    """
+    from domain.decision import DecisionResponse
+    from pipelines.decision import _gold_record
+
+    shared_keys = set(_gold_record(DecisionResponse(
+        order_id="ORD-042", decision_timestamp="2026-08-08T19:15:00-03:00",
+    )))
+    result = _pipeline(AdvancedConfig(final_k=8, max_per_document=2)).run(
+        make_order(), canonical_routes(), _mock(), CONFIG)
+    ev = result.engine_validation
+    assert shared_keys <= set(ev)                 # todas as chaves gold_* do contrato
+    assert "gold_route" in ev
+    assert "gold_selected_route" not in ev        # a chave antiga/errada nao volta
 
 
 def test_reproducible():
