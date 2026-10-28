@@ -27,7 +27,8 @@ certos"** se a rota estiver certa, for válida no motor e vier com citações qu
 necessárias.
 
 **Resultado até aqui:** a hipótese de que o RAG avançado venceria **não se confirmou**. A
-investigação mostrou que o gargalo é o **recall** contra distratores do corpus, não a geração.
+investigação aponta um gargalo de **recuperação**: o chunk decisivo, sufocado por distratores do corpus,
+não chega ao contexto do modelo.
 Os números e o diagnóstico estão em [Resultados](#resultados).
 
 ## O problema
@@ -131,14 +132,19 @@ Execução real: Ollama local, `llama3` (8B), embeddings `nomic-embed-text`, see
   sem prova.
 - **O RAG reduz o contexto em 82–87%** em relação ao corpus completo, com latência um pouco menor.
 - **O P3 não superou o P2.** No caso canônico, o P3 propõe a rota A, que o motor reprova (`ERROR`).
-  O mesmo comportamento apareceu em teste manual com `gpt-4o-mini`, então não é limitação do modelo.
+  O mesmo comportamento apareceu em teste manual com `gpt-4o-mini`. Dois modelos diferentes errando
+  do mesmo jeito sugerem que a causa não está no modelo, mas não descartam essa possibilidade.
 
-### Diagnóstico: o problema é recall, não geração
+### Diagnóstico: um gargalo de recuperação
 
 O chunk que prova o bloqueio de `SG-BD` fica em **32º no BM25** e **46º na busca vetorial** da faceta
 de eventos, muito além do `top_k=10`. Os distratores do corpus (incidentes de outras zonas, boletins
 substituídos) casam melhor com a consulta genérica e ocupam as vagas. Aumentar o `top_k` até 50 não
 traz o chunk decisivo.
+
+Como a prova do bloqueio nunca chega ao contexto, nenhum modelo teria como usá-la, e isso já basta
+para explicar a rota A. O experimento ainda **não isola a geração**: falta verificar se, com o chunk
+decisivo presente, o modelo de fato escolhe C (ver [Próximos passos](#próximos-passos)).
 
 Forçar o P3 a encontrar a rota C neste cenário seria **overfit no próprio benchmark**, então a
 decisão foi documentar a limitação em vez de aplicar um ajuste específico. Investigação completa em
@@ -160,13 +166,16 @@ decisão foi documentar a limitação em vez de aplicar um ajuste específico. I
 ## Próximos passos
 
 1. **Corrigir a janela do P1** (`num_ctx` no provedor) e rodar o benchmark de novo, com mais repetições.
-2. **Recuperação estruturada por ferramenta:** buscar de forma determinística o incidente vigente dos
+2. **Isolar recuperação × geração:** injetar o chunk decisivo no contexto do P3 (um oráculo de
+   recuperação, só para diagnóstico) e medir se o modelo passa a escolher C. Se sim, o gargalo é
+   recuperação. Se não, também há um problema de geração.
+3. **Recuperação estruturada por ferramenta:** buscar de forma determinística o incidente vigente dos
    segmentos das rotas candidatas, em vez de depender de busca fuzzy contra distratores.
-3. **Gate honesto de abstenção:** sem a evidência decisiva confirmada, o P3 deve responder
+4. **Gate honesto de abstenção:** sem a evidência decisiva confirmada, o P3 deve responder
    `INSUFFICIENT_EVIDENCE` em vez de propor uma rota.
-4. **Medir recall@k** do chunk decisivo por faceta, em vários cenários.
-5. Ampliar os casos para além do `ORD-042`.
-6. Interface React comparando os três pipelines lado a lado (em revisão no PR #13), integração com
+5. **Medir recall@k** do chunk decisivo por faceta, em vários cenários.
+6. Ampliar os casos para além do `ORD-042`.
+7. Interface React comparando os três pipelines lado a lado (em revisão no PR #13), integração com
    Arduino como camada de visualização e CI.
 
 ## Como rodar
