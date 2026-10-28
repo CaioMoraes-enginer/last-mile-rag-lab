@@ -177,7 +177,17 @@ class AdvancedPipeline(RagPipeline):
         errors: list[str] = []
         runner = ToolRunner(self.scenario)
         gold = runner.gold_decision()
-        engine_validation = {f"gold_{k}": v for k, v in gold.items()}
+        # MESMO contrato dos demais pipelines (decision._gold_record): a chave da
+        # rota ouro e `gold_route`, nao `gold_selected_route`. Sem isso a API e a
+        # interface (KAN-12) nao encontram a rota ouro do P3 e mostram vazio.
+        engine_validation = {
+            "gold_route": gold["selected_route"],
+            "gold_valid": gold["valid"],
+            "gold_estimated_minutes": gold["estimated_minutes"],
+            "gold_slack_minutes": gold["slack_minutes"],
+            "gold_risk_class": gold["risk_class"],
+            "gold_status": gold["status"],
+        }
 
         # gate de cobertura: faltando faceta essencial -> insuficiencia (antes de confiar no LLM)
         if self._missing:
